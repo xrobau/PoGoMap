@@ -569,6 +569,17 @@ function setupPokemonMarker(item, skipNotification, isBounceDisabled) {
     animationDisabled = true;
   }
 
+  // Always bounce and notify ultra-rare
+  if (item.pokemon_rarity == "Ultra Rare") {
+    marker.setAnimation(google.maps.Animation.BOUNCE);
+    if (!skipNotification) {
+      if (Store.get('playSound')) {
+        audio.play();
+      }
+      sendNotification('An ULTRA RARE ' + item.pokemon_name + ' appeared!', 'Click to load map', 'static/icons/' + item.pokemon_id + '.png', item.latitude, item.longitude);
+    }
+  }
+
   var marker = new google.maps.Marker({
     position: {
       lat: item.latitude,
