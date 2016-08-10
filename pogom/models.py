@@ -71,6 +71,8 @@ class Pokemon(BaseModel):
     latitude = DoubleField()
     longitude = DoubleField()
     disappear_time = DateTimeField(index=True)
+    rare_pokemon = [ 26, 28, 38, 40, 45, 51, 62, 65, 68, 71, 76, 82, 83, 87, 89, 91, 94, 101, 115, 130, 132, 136, 139, 141, 144, 145, 146, 150, 151, ]
+
 
     class Meta:
         indexes = ((('latitude', 'longitude'), False),)
@@ -86,10 +88,13 @@ class Pokemon(BaseModel):
             query = (Pokemon
                      .select()
                      .where((Pokemon.disappear_time > datetime.utcnow()) &
-                            (Pokemon.latitude >= swLat) &
-                            (Pokemon.longitude >= swLng) &
-                            (Pokemon.latitude <= neLat) &
-                            (Pokemon.longitude <= neLng))
+                            (((Pokemon.latitude >= swLat) &
+                              (Pokemon.longitude >= swLng) &
+                              (Pokemon.latitude <= neLat) &
+                              (Pokemon.longitude <= neLng)) |
+                             (Pokemon.pokemon_id << Pokemon.rare_pokemon)
+                            )
+                           )
                      .dicts())
 
         pokemons = []
