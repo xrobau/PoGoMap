@@ -569,17 +569,6 @@ function setupPokemonMarker(item, skipNotification, isBounceDisabled) {
     animationDisabled = true;
   }
 
-  // Always bounce and notify ultra-rare
-  if (item.pokemon_rarity == "Ultra Rare") {
-    marker.setAnimation(google.maps.Animation.BOUNCE);
-    if (!skipNotification) {
-      if (Store.get('playSound')) {
-        audio.play();
-      }
-      sendNotification('An ULTRA RARE ' + item.pokemon_name + ' appeared!', 'Click to load map', 'static/icons/' + item.pokemon_id + '.png', item.latitude, item.longitude);
-    }
-  }
-
   var marker = new google.maps.Marker({
     position: {
       lat: item.latitude,
@@ -601,6 +590,17 @@ function setupPokemonMarker(item, skipNotification, isBounceDisabled) {
     content: pokemonLabel(item.pokemon_name, item.pokemon_rarity, item.pokemon_types, item.disappear_time, item.pokemon_id, item.latitude, item.longitude, item.encounter_id),
     disableAutoPan: true
   });
+
+  // Always bounce and notify ultra-rare
+  if (item.pokemon_rarity == "Ultra Rare") {
+    marker.setAnimation(google.maps.Animation.BOUNCE);
+    if (!skipNotification) {
+      if (Store.get('playSound')) {
+        audio.play();
+      }
+      sendNotification('An ULTRA RARE ' + item.pokemon_name + ' appeared!', 'Click to load map', 'static/icons/' + item.pokemon_id + '.png', item.latitude, item.longitude);
+    }
+  }
 
   if (notifiedPokemon.indexOf(item.pokemon_id) > -1) {
     if (!skipNotification) {
