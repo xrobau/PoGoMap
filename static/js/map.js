@@ -1002,21 +1002,24 @@ function sendNotification(title, text, icon, lat, lng) {
     return false; // Notifications are not present in browser
   }
 
-  if (Notification.permission !== "granted") {
-    Notification.requestPermission();
-  } else {
-    var notification = new Notification(title, {
-      icon: icon,
-      body: text,
-      sound: 'sounds/ding.mp3'
-    });
+  try {
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission();
+    } else {
+      var notification = new Notification(title, {
+        icon: icon,
+        body: text,
+        sound: 'sounds/ding.mp3'
+      });
 
-    notification.onclick = function() {
-      window.focus();
-      notification.close();
-
-      centerMap(lat, lng, 20);
-    };
+      notification.onclick = function() {
+        window.focus();
+        notification.close();
+        centerMap(lat, lng, 20);
+      };
+    }
+  } catch (e) {
+    // Ignore errors
   }
 }
 
