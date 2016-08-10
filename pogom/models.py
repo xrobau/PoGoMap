@@ -71,7 +71,8 @@ class Pokemon(BaseModel):
     latitude = DoubleField()
     longitude = DoubleField()
     disappear_time = DateTimeField(index=True)
-    rare_pokemon = [ 26, 28, 38, 40, 45, 51, 62, 65, 68, 71, 76, 82, 83, 87, 89, 91, 94, 101, 115, 130, 132, 136, 139, 141, 144, 145, 146, 150, 151, ]
+    # 149 Dragonite, 137 Porygon
+    rare_pokemon = [ 26, 28, 38, 40, 45, 51, 62, 65, 68, 71, 76, 82, 83, 87, 89, 91, 94, 101, 115, 130, 132, 136, 139, 141, 144, 145, 146, 150, 151, 149, 137 ]
 
 
     class Meta:
