@@ -1584,6 +1584,7 @@ function myLocationButton (map, marker) {
 
   locationContainer.index = 1
   map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(locationContainer)
+}
 
 function centerMapOnLocation () {
   var currentLocation = document.getElementById('current-location')
