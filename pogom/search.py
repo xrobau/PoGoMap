@@ -191,7 +191,8 @@ def search_overseer_thread(args, new_location_queue, pause_bit, encryption_lib_p
         # If there are no search_items_queue either the loop has finished (or been
         # cleared above) -- either way, time to fill it back up
         if search_items_queue.empty():
-            log.debug('Search queue empty, restarting loop')
+            log.info('Search queue empty, restarting loop in 30 seconds')
+            time.sleep(30)
             for step, step_location in enumerate(locations, 1):
                 log.debug('Queueing step %d @ %f/%f/%f', step, step_location[0], step_location[1], step_location[2])
                 search_args = (step, step_location)
@@ -200,8 +201,7 @@ def search_overseer_thread(args, new_location_queue, pause_bit, encryption_lib_p
         #     log.info('Search queue processing, %d items left', search_items_queue.qsize())
 
         # Now we just give a little pause here
-        log.info('Loop finished. Sleeping for 30 seconds before restarting.')
-        time.sleep(30)
+        time.sleep(1)
 
 
 def search_worker_thread(args, account, search_items_queue, parse_lock, encryption_lib_path):
