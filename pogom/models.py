@@ -3,6 +3,7 @@
 import logging
 import calendar
 import sys
+import gc
 from peewee import SqliteDatabase, InsertQuery, \
     IntegerField, CharField, DoubleField, BooleanField, \
     DateTimeField, CompositeKey, fn
@@ -103,6 +104,7 @@ class Pokemon(BaseModel):
                            )
                      .dicts())
 
+        gc.disable()
         pokemons = []
         for p in query:
             p['pokemon_name'] = get_pokemon_name(p['pokemon_id'])
@@ -113,6 +115,7 @@ class Pokemon(BaseModel):
                     transform_from_wgs_to_gcj(p['latitude'], p['longitude'])
             pokemons.append(p)
 
+        gc.enable()
         return pokemons
 
     @staticmethod
@@ -134,6 +137,7 @@ class Pokemon(BaseModel):
                             (Pokemon.longitude <= neLng))
                      .dicts())
 
+        gc.disable()
         pokemons = []
         for p in query:
             p['pokemon_name'] = get_pokemon_name(p['pokemon_id'])
@@ -144,6 +148,7 @@ class Pokemon(BaseModel):
                     transform_from_wgs_to_gcj(p['latitude'], p['longitude'])
             pokemons.append(p)
 
+        gc.enable()
         return pokemons
 
     @classmethod
@@ -169,6 +174,8 @@ class Pokemon(BaseModel):
                  .where(Pokemon.disappear_time == pokemon_count_query.c.lastappeared)
                  .dicts()
                  )
+
+        gc.disable()
         pokemons = []
         total = 0
         for p in query:
@@ -176,6 +183,7 @@ class Pokemon(BaseModel):
             pokemons.append(p)
             total += p['count']
 
+        gc.enable()
         return {'pokemon': pokemons, 'total': total}
 
     @classmethod
@@ -188,9 +196,11 @@ class Pokemon(BaseModel):
                  .order_by(Pokemon.disappear_time.asc())
                  .dicts()
                  )
+        gc.disable()
         appearances = []
         for a in query:
             appearances.append(a)
+        gc.enable()
         return appearances
 
     @classmethod
@@ -238,6 +248,7 @@ class Pokestop(BaseModel):
                             (Pokestop.longitude <= neLng))
                      .dicts())
 
+        gc.disable()
         pokestops = []
         for p in query:
             if args.china:
@@ -245,6 +256,7 @@ class Pokestop(BaseModel):
                     transform_from_wgs_to_gcj(p['latitude'], p['longitude'])
             pokestops.append(p)
 
+        gc.enable()
         return pokestops
 
 
@@ -281,9 +293,11 @@ class Gym(BaseModel):
                             (Gym.longitude <= neLng))
                      .dicts())
 
+        gc.disable()
         gyms = []
         for g in query:
             gyms.append(g)
+        gc.enable()
 
         return gyms
 
@@ -308,9 +322,15 @@ class ScannedLocation(BaseModel):
                         (ScannedLocation.longitude <= neLng))
                  .dicts())
 
+
+        # Disable garbage collection to speed up building the result
+        gc.disable()
         scans = []
         for s in query:
             scans.append(s)
+
+        # Re-enable
+        gc.enable()
 
         return scans
 
