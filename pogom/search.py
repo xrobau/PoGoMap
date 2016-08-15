@@ -197,6 +197,7 @@ def search_overseer_thread(args, new_location_queue, pause_bit, encryption_lib_p
                 log.debug('Queueing step %d @ %f/%f/%f', step, step_location[0], step_location[1], step_location[2])
                 search_args = (step, step_location)
                 search_items_queue.put(search_args)
+                time.sleep(2)
         # else:
         #     log.info('Search queue processing, %d items left', search_items_queue.qsize())
 
