@@ -139,7 +139,7 @@ class Pogom(Flask):
         else:
             self.location_queue.put((lat, lon, 0))
             log.info('Changing next location: %s,%s', lat, lon)
-            return 'ok'
+            return self.loc()
 
     def list_pokemon(self):
         # todo: check if client is android/iOS/Desktop for geolink, currently
