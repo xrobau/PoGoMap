@@ -1041,11 +1041,7 @@ function gymLabel (teamName, teamId, gymPoints, latitude, longitude) {
         </center>
       </div>`
   } else {
-    var gymPrestige = [2000, 4000, 8000, 12000, 16000, 20000, 30000, 40000, 50000]
-    var gymLevel = 1
-    while (gymPoints >= gymPrestige[gymLevel - 1]) {
-      gymLevel++
-    }
+    var gymLevel = getGymLevel(gymPoints)
     str = `
       <div>
         <center>
@@ -1072,16 +1068,20 @@ function gymLabel (teamName, teamId, gymPoints, latitude, longitude) {
   return str
 }
 
-function pokestopLabel (lured, lastModified, latitude, longitude) {
+function getGymLevel (points) {
+  var prestige = [2000, 4000, 8000, 12000, 16000, 20000, 30000, 40000, 50000]
+  var level = 1
+  while (points >= prestige[level - 1]) {
+    level++
+  }
+
+  return level
+}
+
+function pokestopLabel (expireTime, latitude, longitude) {
   var str
-  if (lured) {
-    var lastModifiedDate = new Date(lastModified)
-    var currentDate = new Date()
-
-    var timeUntilExpire = currentDate.getTime() - lastModifiedDate.getTime()
-
-    var expireDate = new Date(currentDate.getTime() + timeUntilExpire)
-    var expireTime = expireDate.getTime()
+  if (expireTime) {
+    var expireDate = new Date(expireTime)
 
     str = `
       <div>
@@ -1189,7 +1189,7 @@ function setupGymMarker (item) {
       lng: item['longitude']
     },
     map: map,
-    icon: 'static/forts/' + gymTypes[item['team_id']] + '.png'
+    icon: 'static/forts/' + gymTypes[item['team_id']] + (item['team_id'] === 0 ? '' : '_' + getGymLevel(item['gym_points'])) + '.png'
   })
 
   marker.infoWindow = new google.maps.InfoWindow({
@@ -1202,7 +1202,7 @@ function setupGymMarker (item) {
 }
 
 function updateGymMarker (item, marker) {
-  marker.setIcon('static/forts/' + gymTypes[item['team_id']] + '.png')
+  marker.setIcon('static/forts/' + gymTypes[item['team_id']] + (item['team_id'] === 0 ? '' : '_' + getGymLevel(item['gym_points'])) + '.png')
   marker.infoWindow.setContent(gymLabel(gymTypes[item['team_id']], item['team_id'], item['gym_points'], item['latitude'], item['longitude']))
   return marker
 }
@@ -1220,7 +1220,7 @@ function setupPokestopMarker (item) {
   })
 
   marker.infoWindow = new google.maps.InfoWindow({
-    content: pokestopLabel(!!item['lure_expiration'], item['last_modified'], item['latitude'], item['longitude']),
+    content: pokestopLabel(item['lure_expiration'], item['latitude'], item['longitude']),
     disableAutoPan: true
   })
 

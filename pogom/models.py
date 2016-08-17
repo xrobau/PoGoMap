@@ -4,6 +4,7 @@ import logging
 import calendar
 import sys
 import gc
+import math
 from peewee import SqliteDatabase, InsertQuery, \
     IntegerField, CharField, DoubleField, BooleanField, \
     DateTimeField, CompositeKey, fn
@@ -224,6 +225,57 @@ class Pokemon(BaseModel):
 
         return list(query.dicts())
 
+    @classmethod
+    def get_spawnpoints_in_hex(cls, center, steps):
+        log.info('got {}steps'.format(steps))
+        # work out hex bounding box
+        hdist = ((steps * 120.0) - 50.0) / 1000.0
+        vdist = ((steps * 105.0) - 35.0) / 1000.0
+        R = 6378.1  # km radius of the earth
+        vang = math.degrees(vdist / R)
+        hang = math.degrees(hdist / (R * math.cos(math.radians(center[0]))))
+        north = center[0] + vang
+        south = center[0] - vang
+        east = center[1] + hang
+        west = center[1] - hang
+        # get all spawns in that box
+        query = (Pokemon
+                 .select(Pokemon.latitude.alias('lat'),
+                         Pokemon.longitude.alias('lng'),
+                         ((Pokemon.disappear_time.minute * 60) + Pokemon.disappear_time.second).alias('time'),
+                         Pokemon.spawnpoint_id
+                         ))
+        query = (query.where((Pokemon.latitude <= north) &
+                             (Pokemon.latitude >= south) &
+                             (Pokemon.longitude >= west) &
+                             (Pokemon.longitude <= east)
+                             ))
+        # Sqlite doesn't support distinct on columns
+        if args.db_type == 'mysql':
+            query = query.distinct(Pokemon.spawnpoint_id)
+        else:
+            query = query.group_by(Pokemon.spawnpoint_id)
+
+        s = list(query.dicts())
+        # for each spawn work out if it is in the hex (clipping the diagonals)
+        trueSpawns = []
+        for spawn in s:
+            spawn['time'] = (spawn['time'] + 2700) % 3600
+            # get the offset from the center of each spawn in km
+            offset = [math.radians(spawn['lat'] - center[0]) * R, math.radians(spawn['lng'] - center[1]) * (R * math.cos(math.radians(center[0])))]
+            # check agains the 4 lines that make up the diagonals
+            if (offset[1] + (offset[0] * 0.5)) > hdist:  # too far ne
+                continue
+            if (offset[1] - (offset[0] * 0.5)) > hdist:  # too far se
+                continue
+            if ((offset[0] * 0.5) - offset[1]) > hdist:  # too far nw
+                continue
+            if ((0 - offset[1]) - (offset[0] * 0.5)) > hdist:  # too far sw
+                continue
+            # if it gets to here its  a good spawn
+            trueSpawns.append(spawn)
+        return trueSpawns
+
 
 class Pokestop(BaseModel):
     pokestop_id = CharField(primary_key=True, max_length=50)
@@ -357,14 +409,16 @@ def parse_map(map_dict, step_location):
     for cell in cells:
         if config['parse_pokemon']:
             for p in cell.get('wild_pokemons', []):
-                # time_till_hidden_ms was overflowing causing a negative integer. It was also returning a value above 3.6M ms.
-                if (0 < p['time_till_hidden_ms'] < 3600000):
+                # time_till_hidden_ms was overflowing causing a negative integer.
+                # It was also returning a value above 3.6M ms.
+                if 0 < p['time_till_hidden_ms'] < 3600000:
                     d_t = datetime.utcfromtimestamp(
                         (p['last_modified_timestamp_ms'] +
                          p['time_till_hidden_ms']) / 1000.0)
                 else:
                     # Set a value of 15 minutes because currently its unknown but larger than 15.
                     d_t = datetime.utcfromtimestamp((p['last_modified_timestamp_ms'] + 900000) / 1000.0)
+
                 printPokemon(p['pokemon_data']['pokemon_id'], p['latitude'],
                              p['longitude'], d_t)
                 pokemons[p['encounter_id']] = {
@@ -395,13 +449,20 @@ def parse_map(map_dict, step_location):
                     lure_expiration = datetime.utcfromtimestamp(
                         f['last_modified_timestamp_ms'] / 1000.0) + timedelta(minutes=30)
                     active_fort_modifier = f['active_fort_modifier']
+
                     webhook_data = {
+                        'pokestop_id': f['id'],
+                        'enabled': f['enabled'],
                         'latitude': f['latitude'],
                         'longitude': f['longitude'],
                         'last_modified_time': f['last_modified_timestamp_ms'],
+                        'lure_expiration': calendar.timegm(lure_expiration.timetuple()),
                         'active_fort_modifier': active_fort_modifier
                     }
-                    send_to_webhook('pokestop', webhook_data)
+
+                    # Include lured pokéstops in our updates to webhooks
+                    if args.webhook_updates_only:
+                        send_to_webhook('pokestop', webhook_data)
                 else:
                     lure_expiration, active_fort_modifier = None, None
 
@@ -416,6 +477,21 @@ def parse_map(map_dict, step_location):
                     'active_fort_modifier': active_fort_modifier,
                 }
 
+                # Send all pokéstops to webhooks
+                if not args.webhook_updates_only:
+                    # Explicitly set 'webhook_data', in case we want to change the information pushed to webhooks,
+                    # similar to above and previous commits.
+                    webhook_data = {
+                        'pokestop_id': f['id'],
+                        'enabled': f['enabled'],
+                        'latitude': f['latitude'],
+                        'longitude': f['longitude'],
+                        'last_modified': calendar.timegm(pokestops[f['id']]['last_modified'].timetuple()),
+                        'lure_expiration': lure_expiration,
+                        'active_fort_modifier': active_fort_modifier,
+                    }
+                    send_to_webhook('pokestop', webhook_data)
+
             elif config['parse_gyms'] and f.get('type') is None:  # Currently, there are only stops and gyms
                 gyms[f['id']] = {
                     'gym_id': f['id'],
@@ -428,6 +504,22 @@ def parse_map(map_dict, step_location):
                     'last_modified': datetime.utcfromtimestamp(
                         f['last_modified_timestamp_ms'] / 1000.0),
                 }
+
+                # Send gyms to webhooks
+                if not args.webhook_updates_only:
+                    # Explicitly set 'webhook_data', in case we want to change the information pushed to webhooks,
+                    # similar to above and previous commits.
+                    webhook_data = {
+                        'gym_id': f['id'],
+                        'team_id': f.get('owned_by_team', 0),
+                        'guard_pokemon_id': f.get('guard_pokemon_id', 0),
+                        'gym_points': f.get('gym_points', 0),
+                        'enabled': f['enabled'],
+                        'latitude': f['latitude'],
+                        'longitude': f['longitude'],
+                        'last_modified': calendar.timegm(gyms[f['id']]['last_modified'].timetuple()),
+                    }
+                    send_to_webhook('gym', webhook_data)
 
     pokemons_upserted = 0
     pokestops_upserted = 0
