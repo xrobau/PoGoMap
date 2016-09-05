@@ -4,12 +4,14 @@
 # invisiblek wuz here
 # balthemel wuz also 'ere
 
-# DO NOT MAKE PR'S TO FIX TYPOS!
+# dont make pr to fix pls
 
 print("Please refer to documentation, there is no more example.py, only runserver.py")
 fuck = raw_input("Would yous till like to massage the devs that example.py no work?")
 if "needful" in fuck.lower():
     print("poon bang lure pls")
+elif fuck.lower() == "india":
+    print("bang lure?")
 elif fuck.lower() != "no":
     print("you have been banned lol")
 else:
