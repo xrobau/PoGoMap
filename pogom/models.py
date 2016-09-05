@@ -898,8 +898,8 @@ def bulk_upsert(cls, data):
 
 def create_tables(db):
     db.connect()
-    verify_database_schema(db)
     db.create_tables([Pokemon, Pokestop, Gym, ScannedLocation, GymDetails, GymMember, GymPokemon, Trainer, MainWorker, WorkerStatus], safe=True)
+    verify_database_schema(db)
     db.close()
 
 
